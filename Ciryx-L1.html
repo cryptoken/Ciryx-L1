@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ciryx-L1 | AI Assistant</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        /* Ciryx Dark Theme */
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #141414;
+            --bg-tertiary: #1a1a1a;
+            --ciryx-purple: #8b5cf6;
+            --ciryx-blue: #3b82f6;
+            --border-color: #2a2a2a;
+            --text-primary: #e4e4e7;
+            --text-secondary: #a1a1aa;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        pre, code {
+            font-family: 'JetBrains Mono', 'Courier New', monospace;
+        }
+
+        /* Animations */
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.1); }
+        }
+        
+        .thinking-dot {
+            animation: pulse-glow 1.5s ease-in-out infinite;
+        }
+        .thinking-dot:nth-child(2) { animation-delay: 0.2s; }
+        .thinking-dot:nth-child(3) { animation-delay: 0.4s; }
+        
+        /* Custom scrollbar */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+            border-radius: 5px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #3a3a3a;
+            border-radius: 5px;
+            border: 2px solid var(--bg-secondary);
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #4a4a4a;
+        }
+
+        @keyframes slide-up {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .message-animate {
+            animation: slide-up 0.3s ease-out;
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, var(--ciryx-purple) 0%, var(--ciryx-blue) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .glass-morphism {
+            background: rgba(20, 20, 20, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .btn-glow:hover {
+            box-shadow: 0 0 30px rgba(139, 92, 246, 0.4);
+        }
+
+        .code-block {
+            background: #0d0d0d;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            margin: 12px 0;
+            overflow-x: auto;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .code-block code {
+            color: #61dafb;
+        }
+
+        textarea {
+            scrollbar-width: thin;
+            scrollbar-color: #3a3a3a var(--bg-secondary);
+        }
+    </style>
+</head>
+<body>
+    <div id="root" class="h-screen flex flex-col">
+        <!-- Header -->
+        <div class="glass-morphism border-b border-gray-800 px-6 py-4 shadow-2xl">
+            <div class="max-w-5xl mx-auto flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <div class="relative">
+                        <div class="text-3xl font-bold gradient-text">⚡</div>
+                        <div class="absolute -inset-1 bg-purple-500 rounded-full blur-lg opacity-20 animate-pulse"></div>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold gradient-text">
+                            Ciryx-L1
+                        </h1>
+                        <p class="text-xs text-gray-500 font-medium mt-0.5">Powered by Ciryx AI</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <select id="modelSelect" class="bg-gray-900 text-gray-300 px-4 py-2 rounded-lg border border-gray-700 focus:border-purple-500 focus:outline-none transition-colors font-medium text-sm">
+                        <option value="">Loading models...</option>
+                    </select>
+                    <button id="refreshModels" class="p-2 text-gray-500 hover:text-purple-400 transition-all hover:scale-110" title="Refresh models">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        </svg>
+                    </button>
+                    <button id="clearChat" class="p-2 text-gray-500 hover:text-red-400 transition-all hover:scale-110" title="Clear chat">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Container -->
+        <div class="flex-1 overflow-hidden flex flex-col max-w-5xl mx-auto w-full">
+            <div id="chatContainer" class="flex-1 overflow-y-auto px-6 py-6 space-y-4 custom-scrollbar">
+                <!-- Welcome message -->
+                <div class="text-center py-12" id="welcomeMessage">
+                    <div class="relative inline-block">
+                        <div class="text-6xl mb-6 font-bold gradient-text">⚡</div>
+                        <div class="absolute inset-0 bg-purple-500 rounded-full blur-3xl opacity-10 animate-pulse"></div>
+                    </div>
+                    <h2 class="text-2xl font-semibold text-gray-300 mb-2">Welcome to Ciryx-L1</h2>
+                    <p class="text-gray-500 font-medium">Your Local AI Assistant by Ciryx AI</p>
+                    <div class="mt-6 inline-flex items-center px-4 py-2 bg-gray-900 rounded-lg border border-gray-800" id="statusIndicator">
+                        <div class="w-2 h-2 bg-yellow-400 rounded-full mr-2 animate-pulse"></div>
+                        <span class="text-xs text-gray-400 font-medium">Connecting to Ollama...</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="glass-morphism border-t border-gray-800 px-6 py-4">
+                <div class="flex space-x-3">
+                    <textarea
+                        id="messageInput"
+                        class="flex-1 bg-gray-900 text-gray-100 rounded-xl px-4 py-3 resize-none outline-none focus:ring-2 focus:ring-purple-500 placeholder-gray-500 font-medium transition-all"
+                        placeholder="Type your message... (Shift+Enter for new line)"
+                        rows="2"
+                    ></textarea>
+                    <button
+                        id="sendButton"
+                        class="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-8 py-3 rounded-xl font-semibold transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 btn-glow"
+                    >
+                        <span class="flex items-center">
+                            Send
+                            <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+                            </svg>
+                        </span>
+                    </button>
+                </div>
+                <div id="errorMessage" class="hidden mt-3 px-4 py-2 bg-red-900/20 border border-red-800 rounded-lg text-red-400 text-sm font-medium"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize elements
+        const chatContainer = document.getElementById('chatContainer');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        const modelSelect = document.getElementById('modelSelect');
+        const clearChatBtn = document.getElementById('clearChat');
+        const errorMessage = document.getElementById('errorMessage');
+        const refreshBtn = document.getElementById('refreshModels');
+        
+        let messages = [];
+        let isLoading = false;
+        let availableModels = [];
+
+        // Load available models from Ollama
+        async function loadModels() {
+            console.log('Loading models from Ollama...');
+            modelSelect.innerHTML = '<option value="">Loading models...</option>';
+            
+            try {
+                const response = await fetch('http://localhost:11434/api/tags');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('Models loaded:', data);
+                
+                modelSelect.innerHTML = '';
+                availableModels = data.models || [];
+                
+                if (availableModels.length > 0) {
+                    availableModels.forEach(model => {
+                        const option = document.createElement('option');
+                        option.value = model.name;
+                        const sizeGB = (model.size / (1024 * 1024 * 1024)).toFixed(1);
+                        option.textContent = `${model.name} (${sizeGB} GB)`;
+                        modelSelect.appendChild(option);
+                    });
+                    
+                    // Update status indicator
+                    const statusDiv = document.getElementById('statusIndicator');
+                    if (statusDiv) {
+                        statusDiv.innerHTML = `
+                            <div class="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>
+                            <span class="text-xs text-gray-400 font-medium">${availableModels.length} model(s) ready</span>
+                        `;
+                    }
+                } else {
+                    modelSelect.innerHTML = '<option value="">No models installed</option>';
+                    
+                    // Update welcome message for no models
+                    const welcomeMsg = document.getElementById('welcomeMessage');
+                    if (welcomeMsg) {
+                        welcomeMsg.innerHTML = `
+                            <div class="relative inline-block">
+                                <div class="text-6xl mb-6 font-bold gradient-text">⚡</div>
+                                <div class="absolute inset-0 bg-purple-500 rounded-full blur-3xl opacity-10 animate-pulse"></div>
+                            </div>
+                            <h2 class="text-2xl font-semibold text-gray-300 mb-2">No Models Installed</h2>
+                            <p class="text-gray-500 font-medium mb-4">Install a model to get started with Ciryx-L1</p>
+                            <div class="bg-gray-900 rounded-lg p-4 inline-block text-left">
+                                <p class="text-sm text-gray-400 mb-2">Run this in PowerShell:</p>
+                                <code class="text-green-400 font-mono">ollama pull llama3.2</code>
+                                <p class="text-xs text-gray-500 mt-2">Then click the refresh button above ↻</p>
+                            </div>
+                        `;
+                    }
+                    
+                    showError('No models found! Install one with: ollama pull llama3.2');
+                }
+            } catch (error) {
+                console.error('Failed to load models:', error);
+                modelSelect.innerHTML = '<option value="">Connection failed</option>';
+                
+                const statusDiv = document.getElementById('statusIndicator');
+                if (statusDiv) {
+                    statusDiv.innerHTML = `
+                        <div class="w-2 h-2 bg-red-400 rounded-full mr-2"></div>
+                        <span class="text-xs text-gray-400 font-medium">Cannot connect to Ollama</span>
+                    `;
+                }
+                
+                showError('Cannot connect to Ollama. Make sure it\'s running with: $env:OLLAMA_ORIGINS="*"; ollama serve');
+            }
+        }
+
+        // Auto-resize textarea
+        messageInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 150) + 'px';
+        });
+
+        // Handle Enter key
+        messageInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        // Event listeners
+        sendButton.addEventListener('click', sendMessage);
+        clearChatBtn.addEventListener('click', clearChat);
+        refreshBtn.addEventListener('click', () => {
+            console.log('Manual refresh triggered');
+            loadModels();
+        });
+
+        function clearChat() {
+            messages = [];
+            const welcomeMsg = document.getElementById('welcomeMessage');
+            if (welcomeMsg) {
+                chatContainer.innerHTML = '';
+                chatContainer.appendChild(welcomeMsg);
+            } else {
+                chatContainer.innerHTML = `
+                    <div class="text-center py-12" id="welcomeMessage">
+                        <div class="relative inline-block">
+                            <div class="text-6xl mb-6 font-bold gradient-text">⚡</div>
+                            <div class="absolute inset-0 bg-purple-500 rounded-full blur-3xl opacity-10 animate-pulse"></div>
+                        </div>
+                        <h2 class="text-2xl font-semibold text-gray-300 mb-2">Chat Cleared</h2>
+                        <p class="text-gray-500 font-medium">Ready for a new conversation with Ciryx-L1</p>
+                    </div>
+                `;
+            }
+        }
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.classList.remove('hidden');
+            setTimeout(() => {
+                errorMessage.classList.add('hidden');
+            }, 5000);
+        }
+
+        function addMessage(role, content) {
+            // Remove welcome message if it exists
+            const welcomeMsg = document.getElementById('welcomeMessage');
+            if (welcomeMsg) welcomeMsg.remove();
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `flex ${role === 'user' ? 'justify-end' : 'justify-start'} message-animate`;
+            
+            const innerDiv = document.createElement('div');
+            innerDiv.className = `max-w-[75%] rounded-2xl px-5 py-3 ${
+                role === 'user' 
+                    ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg shadow-purple-500/20' 
+                    : 'bg-gray-900 text-gray-200 border border-gray-800 shadow-lg'
+            }`;
+            
+            if (role === 'assistant') {
+                // Format code blocks
+                content = content.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
+                    return `<div class="code-block"><code>${escapeHtml(code.trim())}</code></div>`;
+                });
+                
+                // Format inline code
+                content = content.replace(/`([^`]+)`/g, '<code class="px-1.5 py-0.5 bg-gray-800 text-purple-400 rounded text-sm font-mono">$1</code>');
+                
+                // Format line breaks
+                content = content.replace(/\n/g, '<br>');
+                
+                innerDiv.innerHTML = `<div class="font-medium leading-relaxed">${content}</div>`;
+            } else {
+                innerDiv.innerHTML = `<div class="font-medium">${escapeHtml(content)}</div>`;
+            }
+            
+            messageDiv.appendChild(innerDiv);
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function showThinking() {
+            const thinkingDiv = document.createElement('div');
+            thinkingDiv.id = 'thinking';
+            thinkingDiv.className = 'flex justify-start message-animate';
+            thinkingDiv.innerHTML = `
+                <div class="bg-gray-900 border border-gray-800 rounded-2xl px-5 py-3 flex items-center space-x-3">
+                    <span class="text-gray-400 font-medium">Ciryx-L1 is thinking</span>
+                    <div class="flex space-x-1.5">
+                        <div class="w-2 h-2 bg-purple-400 rounded-full thinking-dot"></div>
+                        <div class="w-2 h-2 bg-blue-400 rounded-full thinking-dot"></div>
+                        <div class="w-2 h-2 bg-purple-400 rounded-full thinking-dot"></div>
+                    </div>
+                </div>
+            `;
+            chatContainer.appendChild(thinkingDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function removeThinking() {
+            const thinking = document.getElementById('thinking');
+            if (thinking) thinking.remove();
+        }
+
+        async function sendMessage() {
+            const input = messageInput.value.trim();
+            if (!input || isLoading) return;
+            
+            // Check if a model is selected
+            if (!modelSelect.value) {
+                showError('Please select a model or install one with: ollama pull llama3.2');
+                return;
+            }
+
+            isLoading = true;
+            sendButton.disabled = true;
+            errorMessage.classList.add('hidden');
+
+            // Add user message
+            messages.push({ role: 'user', content: input });
+            addMessage('user', input);
+            messageInput.value = '';
+            messageInput.style.height = 'auto';
+
+            // Show thinking indicator
+            showThinking();
+
+            try {
+                console.log('Sending message with model:', modelSelect.value);
+                
+                const response = await fetch('http://localhost:11434/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        model: modelSelect.value,
+                        messages: messages,
+                        stream: false
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                if (data.message && data.message.content) {
+                    messages.push({ role: 'assistant', content: data.message.content });
+                    removeThinking();
+                    addMessage('assistant', data.message.content);
+                } else {
+                    throw new Error('Invalid response format from Ollama');
+                }
+
+            } catch (error) {
+                removeThinking();
+                console.error('Error:', error);
+                
+                if (error.message.includes('Failed to fetch')) {
+                    showError('⚠️ Cannot connect to Ollama. Make sure it\'s running with: $env:OLLAMA_ORIGINS="*"; ollama serve');
+                } else if (error.message.includes('404')) {
+                    showError(`⚠️ Model "${modelSelect.value}" not found. Try: ollama pull ${modelSelect.value}`);
+                } else {
+                    showError(`⚠️ Error: ${error.message}`);
+                }
+                
+                // Remove the failed message from history
+                messages.pop();
+            } finally {
+                isLoading = false;
+                sendButton.disabled = false;
+                messageInput.focus();
+            }
+        }
+
+        // Initialize on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            console.log('Ciryx-L1 Interface loaded');
+            loadModels();
+            messageInput.focus();
+        });
+
+        // Refresh models every 30 seconds
+        setInterval(() => {
+            if (!isLoading) {
+                loadModels();
+            }
+        }, 30000);
+    </script>
+</body>
+</html>
